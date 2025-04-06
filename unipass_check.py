@@ -99,7 +99,7 @@ def main():
         if "반입신고" in status_list:
             if status_data.get(key) != "반입신고":
                 # 메일 보내고 삭제
-                subject = "[✅ 자동 삭제] " + invoice_no
+                subject = "[📦 반입신고 상태 도달] " + invoice_no
                 body = f"송장번호 {invoice_no}가 반입신고 상태에 도달하여 자동으로 리스트에서 삭제되었습니다."
                 send_email(subject, body)
                 status_data[key] = "반입신고"
