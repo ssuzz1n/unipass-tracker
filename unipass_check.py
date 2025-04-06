@@ -30,21 +30,34 @@ def save_status(status_data):
 # 처리단계 조회
 def check_status(customs_code, invoice_no):
     url = f"https://asap-china.com/guide/unipass_delivery.php?code={customs_code}&invoice={invoice_no}"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+    }
     try:
-        res = requests.get(url)
+        res = requests.get(url, headers=headers)
         res.raise_for_status()
         soup = BeautifulSoup(res.text, "html.parser")
-        table = soup.find("table", class_="table")
-        if not table:
+
+        tables = soup.find_all("table")
+        if len(tables) < 2:
             print(f"[❌ 처리단계 없음] {customs_code}, {invoice_no}")
             return []
 
-        rows = table.find_all("tr")[1:]
-        status_list = [row.find_all("td")[1].text.strip() for row in rows]
+        status_table = tables[1]  # 두 번째 테이블이 처리단계 테이블
+        rows = status_table.find_all("tr")[1:]  # 첫 줄은 헤더니까 제외
+
+        status_list = []
+        for row in rows:
+            cols = row.find_all("td")
+            if len(cols) >= 2:
+                status = cols[1].text.strip()
+                status_list.append(status)
+
         return status_list
     except Exception as e:
         print(f"[⚠️ 에러] {customs_code}, {invoice_no}: {e}")
         return []
+
 
 # 메일 발송
 def send_email(subject, body):
