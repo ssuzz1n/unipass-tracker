@@ -1,54 +1,66 @@
 import requests
-import json
+from bs4 import BeautifulSoup
 import smtplib
 from email.mime.text import MIMEText
+from datetime import datetime
 import os
 
-EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
-EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
+TRACKING_FILE = "tracking_list.txt"
 
-with open("tracking_list.txt", "r") as f:
-    tracking_list = [line.strip().split(",") for line in f if line.strip()]
+EMAIL_ADDRESS = "pink_glitter@naver.com"
+EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD")
 
-for code, invoice in tracking_list:
-    url = f"https://asap-china.com/guide/unipass_delivery.php?code={code}&invoice={invoice}"
-    res = requests.get(url)
-    if res.status_code != 200:
-        print(f"[❌ 요청 실패] {code}")
-        continue
+def send_email(invoice_no):
+    msg = MIMEText(f"[반입신고 도착] 송장번호 {invoice_no}가 반입신고 단계에 도달했습니다.")
+    msg['Subject'] = f"[반입신고 도착] {invoice_no}"
+    msg['From'] = EMAIL_ADDRESS
+    msg['To'] = EMAIL_ADDRESS
 
-    html = res.text
-    stages = [
-        "통관목록접수", "입항적재화물목록 제출", "입항적재화물목록 심사완료",
-        "하선신고 수리", "입항보고 수리", "입항적재화물목록 운항정보 정정",
-        "반입신고", "반출신고", "통관목록심사완료"
-    ]
-    current_stage = max([i for i, s in enumerate(stages) if s in html], default=-1)
+    with smtplib.SMTP_SSL('smtp.naver.com', 465) as server:
+        server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+        server.send_message(msg)
 
-    if current_stage == 6:  # 반입신고
-        msg = MIMEText(f"[📦 반입신고] 송장번호: {code}")
-        msg['Subject'] = f"반입신고 도착 - {code}"
-        msg['From'] = EMAIL_ADDRESS
-        msg['To'] = EMAIL_ADDRESS
+def check_status(invoice_no):
+    url = f"https://asap-china.com/guide/unipass_delivery.php?invoice={invoice_no}"
+    try:
+        res = requests.get(url)
+        res.raise_for_status()
+        soup = BeautifulSoup(res.text, 'html.parser')
+        table = soup.find('table')
+        rows = table.find_all('tr')[1:] if table else []
 
-        with smtplib.SMTP_SSL('smtp.naver.com', 465) as smtp:
-            smtp.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
-            smtp.send_message(msg)
-        print(f"[📬 메일 발송 완료] {code}")
+        for row in rows:
+            cols = row.find_all('td')
+            if len(cols) >= 3:
+                stage = cols[1].text.strip()
+                if '반입신고' in stage:
+                    print(f"[반입신고 감지] {invoice_no}")
+                    send_email(invoice_no)
+                    return True
+    except Exception as e:
+        print(f"[에러] {invoice_no}: {e}")
+    return False
 
-        # 파일에서 삭제
-        with open("tracking_list.txt", "r") as f:
-            lines = f.readlines()
-        with open("tracking_list.txt", "w") as f:
-            for line in lines:
-                if not line.startswith(code):
-                    f.write(line)
+def load_tracking_list():
+    if not os.path.exists(TRACKING_FILE):
+        return []
+    with open(TRACKING_FILE, 'r') as f:
+        return [line.strip() for line in f if line.strip()]
 
-    elif current_stage == 8:  # 통관목록심사완료
-        print(f"[✅ 자동 삭제] {code}")
-        with open("tracking_list.txt", "r") as f:
-            lines = f.readlines()
-        with open("tracking_list.txt", "w") as f:
-            for line in lines:
-                if not line.startswith(code):
-                    f.write(line)
+def save_tracking_list(invoice_list):
+    with open(TRACKING_FILE, 'w') as f:
+        for invoice in invoice_list:
+            f.write(f"{invoice}\n")
+
+def main():
+    invoice_list = load_tracking_list()
+    remaining_list = []
+
+    for invoice in invoice_list:
+        if not check_status(invoice):
+            remaining_list.append(invoice)
+    
+    save_tracking_list(remaining_list)
+
+if __name__ == "__main__":
+    main()
