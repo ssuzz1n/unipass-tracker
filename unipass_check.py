@@ -4,6 +4,7 @@ import smtplib
 import json
 from email.mime.text import MIMEText
 from email.utils import formataddr
+from dotenv import load_dotenv
 import os
 
 # 이메일 설정
