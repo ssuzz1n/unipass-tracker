@@ -115,7 +115,7 @@ def main():
 
 if __name__ == "__main__":
     print(f"[DEBUG] EMAIL_ADDRESS: {EMAIL_ADDRESS}")
-print(f"[DEBUG] EMAIL_PASSWORD: {'SET' if EMAIL_PASSWORD else 'NOT SET'}")
-print(f"[DEBUG] EMAIL_NAME: {EMAIL_NAME}")
-print(f"[DEBUG] TO_EMAIL: {TO_EMAIL}")
+    print(f"[DEBUG] EMAIL_PASSWORD: {'SET' if EMAIL_PASSWORD else 'NOT SET'}")
+    print(f"[DEBUG] EMAIL_NAME: {EMAIL_NAME}")
+    print(f"[DEBUG] TO_EMAIL: {TO_EMAIL}")
     main()
