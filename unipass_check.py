@@ -138,4 +138,6 @@ def main():
 if __name__ == "__main__":
     print("[✅ 유니패스 자동 추적 시작]")
     print(f"EMAIL: {EMAIL_ADDRESS} / TO: {TO_EMAIL}")
+    print(f"NOTION_DATABASE_ID: {repr(NOTION_DATABASE_ID)}")
+    print(f"NOTION_TOKEN: {repr(NOTION_TOKEN)}")
     main()
