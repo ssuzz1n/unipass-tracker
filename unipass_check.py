@@ -95,6 +95,18 @@ def send_email(subject, body):
         print(f"[⚠️ 메일 전송 실패] {e}")
 
 # Notion에서 송장번호 가져오기 (customs_code + invoice + page_id)
+# 안전하게 rich_text와 title을 읽는 함수들
+def get_rich_text_value(prop):
+    if prop.get("type") == "rich_text" and prop.get("rich_text"):
+        return prop["rich_text"][0].get("plain_text", "")
+    return ""
+
+def get_title_value(prop):
+    if prop.get("type") == "title" and prop.get("title"):
+        return prop["title"][0].get("plain_text", "")
+    return ""
+
+# Notion에서 송장번호 가져오기 (customs_code + invoice + page_id)
 def get_tracking_items():
     try:
         response = notion.databases.query(database_id=NOTION_DATABASE_ID)
@@ -103,16 +115,20 @@ def get_tracking_items():
 
         for item in results:
             props = item["properties"]
-            # 여기서 '통관부호'와 '송장번호' 컬럼 이름이 정확히 일치해야 함
-            customs_code = props["통관부호"]["rich_text"][0]["plain_text"]
-            invoice = props["송장번호"]["title"][0]["plain_text"]
+            customs_code = get_rich_text_value(props.get("통관부호", {}))
+            invoice = get_title_value(props.get("송장번호", {}))
             page_id = item["id"]
-            tracking_items.append((customs_code, invoice, page_id))
+
+            if customs_code and invoice:
+                tracking_items.append((customs_code, invoice, page_id))
+            else:
+                print(f"[⚠️ 누락된 항목 건너뜀] {customs_code=} {invoice=}")
 
         return tracking_items
     except Exception as e:
         print(f"[⚠️ Notion 데이터 불러오기 실패] {e}")
         return []
+
 
 # Notion에서 항목 삭제
 def delete_item_from_notion(page_id):
