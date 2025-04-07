@@ -18,8 +18,8 @@ EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 TO_EMAIL = os.getenv("TO_EMAIL") or EMAIL_ADDRESS
 
 # Notion 설정
-NOTION_TOKEN = os.getenv("NOTION_TOKEN")
-NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID")
+NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID", "").strip()
+NOTION_TOKEN = os.getenv("NOTION_TOKEN", "").strip()
 
 notion = Client(auth=NOTION_TOKEN)
 
