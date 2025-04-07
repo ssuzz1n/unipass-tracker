@@ -6,6 +6,7 @@ from email.mime.text import MIMEText
 from email.utils import formataddr
 from dotenv import load_dotenv
 import os
+import re
 from notion_client import Client  # Notion SDK
 
 # .env 로드
@@ -20,6 +21,10 @@ TO_EMAIL = os.getenv("TO_EMAIL") or EMAIL_ADDRESS
 # Notion 설정
 NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID", "").strip()
 NOTION_TOKEN = os.getenv("NOTION_TOKEN", "").strip()
+
+if NOTION_DATABASE_ID and '-' not in NOTION_DATABASE_ID:
+    NOTION_DATABASE_ID = str(re.sub(r"(.{8})(.{4})(.{4})(.{4})(.{12})", r"\1-\2-\3-\4-\5", NOTION_DATABASE_ID))
+
 
 notion = Client(auth=NOTION_TOKEN)
 
