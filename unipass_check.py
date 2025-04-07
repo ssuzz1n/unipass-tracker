@@ -23,6 +23,13 @@ NOTION_TOKEN = os.getenv("NOTION_TOKEN", "").strip()
 
 notion = Client(auth=NOTION_TOKEN)
 
+try:
+    print("[🔍 Notion DB 조회 테스트]")
+    db = notion.databases.retrieve(database_id=NOTION_DATABASE_ID)
+    print("[✅ Notion DB 이름]", db["title"][0]["text"]["content"])
+except Exception as e:
+    print(f"[⚠️ DB 조회 실패] {e}")
+
 # 상태 저장 파일
 STATUS_FILE = "unipass_status.json"
 
