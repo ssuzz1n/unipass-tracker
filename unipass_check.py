@@ -49,11 +49,10 @@ def check_unipass_status(code, invoice):
     steps = []
     for row in rows:
         tds = row.find_all("td")
-        if len(tds) > 1:
+        if len(tds) >= 2:
             steps.append(tds[1].get_text(strip=True))
 
     return steps
-
 
 def delete_notion_page(page_id):
     notion.pages.update(page_id=page_id, archived=True)
@@ -78,10 +77,14 @@ def main():
 
     for code, invoice, page_id, url, name in items:
         steps = check_unipass_status(code, invoice)
+        if not steps:
+            continue
         if "반입신고" in steps:
             found_items.append((invoice, url, name))
             delete_notion_page(page_id)
             print(f"[🔔 반입신고 확인됨] {invoice} / 삭제됨")
+        else:
+            print(f"[📄 반입신고 미포함] {invoice} / 현재단계: {steps[-1]}")
 
     if found_items:
         subject = "[📦 반입신고 알림] 유니패스 통관 처리 완료"
