@@ -7,28 +7,26 @@ from email.utils import formataddr
 from dotenv import load_dotenv
 import os
 import re
-from notion_client import Client  # Notion SDK
-
+from notion_client import Client
 
 # .env 로드
 load_dotenv()
 
-# 이메일 설정
 EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
 EMAIL_NAME = os.getenv("EMAIL_NAME") or "유니패스 알리미"
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 TO_EMAIL = os.getenv("TO_EMAIL") or EMAIL_ADDRESS
 
-# Notion 설정
 NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID", "").strip()
 NOTION_TOKEN = os.getenv("NOTION_TOKEN", "").strip()
 
+# UUID 하이픈 자동 포맷
 if NOTION_DATABASE_ID and '-' not in NOTION_DATABASE_ID:
     NOTION_DATABASE_ID = str(re.sub(r"(.{8})(.{4})(.{4})(.{4})(.{12})", r"\1-\2-\3-\4-\5", NOTION_DATABASE_ID))
 
-
 notion = Client(auth=NOTION_TOKEN)
 
+# DB 조회 확인
 try:
     print("[🔍 Notion DB 조회 테스트]")
     db = notion.databases.retrieve(database_id=NOTION_DATABASE_ID)
@@ -36,7 +34,7 @@ try:
 except Exception as e:
     print(f"[⚠️ DB 조회 실패] {e}")
 
-# 상태 저장 파일
+# 상태 저장용
 STATUS_FILE = "unipass_status.json"
 
 def load_status():
@@ -49,12 +47,11 @@ def save_status(status_data):
     with open(STATUS_FILE, "w") as f:
         json.dump(status_data, f, indent=4)
 
-# 처리단계 조회
+# 유니패스 상태 조회
 def check_status(customs_code, invoice_no):
     url = f"https://asap-china.com/guide/unipass_delivery.php?code={customs_code}&invoice={invoice_no}"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-    }
+    headers = { "User-Agent": "Mozilla/5.0" }
+
     try:
         res = requests.get(url, headers=headers)
         res.raise_for_status()
@@ -80,7 +77,7 @@ def check_status(customs_code, invoice_no):
         print(f"[⚠️ 에러] {customs_code}, {invoice_no}: {e}")
         return []
 
-# 메일 발송
+# 메일 전송
 def send_email(subject, body):
     msg = MIMEText(body, "plain", "utf-8")
     msg["Subject"] = subject
@@ -95,19 +92,7 @@ def send_email(subject, body):
     except Exception as e:
         print(f"[⚠️ 메일 전송 실패] {e}")
 
-# Notion에서 송장번호 가져오기 (customs_code + invoice + page_id)
-# 안전하게 rich_text와 title을 읽는 함수들
-def get_rich_text_value(prop):
-    if prop.get("type") == "rich_text" and prop.get("rich_text"):
-        return prop["rich_text"][0].get("plain_text", "")
-    return ""
-
-def get_title_value(prop):
-    if prop.get("type") == "title" and prop.get("title"):
-        return prop["title"][0].get("plain_text", "")
-    return ""
-
-# Notion에서 송장번호 가져오기 (customs_code + invoice + page_id)
+# Notion에서 조회 링크 기반으로 code/invoice 추출
 def get_tracking_items():
     try:
         response = notion.databases.query(database_id=NOTION_DATABASE_ID)
@@ -116,22 +101,29 @@ def get_tracking_items():
 
         for item in results:
             props = item["properties"]
-            customs_code = get_rich_text_value(props.get("통관부호", {}))
-            invoice = get_title_value(props.get("송장번호", {}))
             page_id = item["id"]
 
-            if customs_code and invoice:
-                tracking_items.append((customs_code, invoice, page_id))
+            # '조회링크'라는 이름의 property에서 URL 추출
+            url_field = props.get("조회링크", {})
+            if url_field.get("type") == "url":
+                url = url_field.get("url", "")
             else:
-                print(f"[⚠️ 누락된 항목 건너뜀] {customs_code=} {invoice=}")
+                continue
+
+            # code=... & invoice=... 추출
+            match = re.search(r"code=([\w\d]+)&invoice=(\d+)", url)
+            if match:
+                code, invoice = match.group(1), match.group(2)
+                tracking_items.append((code, invoice, page_id))
+            else:
+                print(f"[⚠️ 유효하지 않은 링크 형식] {url}")
 
         return tracking_items
     except Exception as e:
         print(f"[⚠️ Notion 데이터 불러오기 실패] {e}")
         return []
 
-
-# Notion에서 항목 삭제
+# Notion 항목 삭제
 def delete_item_from_notion(page_id):
     try:
         notion.pages.update(page_id=page_id, archived=True)
@@ -146,8 +138,8 @@ def main():
 
     for customs_code, invoice_no, page_id in tracking_items:
         key = f"{customs_code}_{invoice_no}"
-
         status_list = check_status(customs_code, invoice_no)
+
         if not status_list:
             continue
 
@@ -164,6 +156,7 @@ def main():
 
     save_status(status_data)
 
+# 시작
 if __name__ == "__main__":
     print("[✅ 유니패스 자동 추적 시작]")
     main()
