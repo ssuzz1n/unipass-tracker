@@ -44,9 +44,16 @@ def check_unipass_status(code, invoice):
         print(f"[❌ 처리단계 없음] {invoice}")
         return []
 
-    rows = table.find_all("tr")[1:]  # 첫 번째는 헤더
-    steps = [row.find_all("td")[1].get_text(strip=True) for row in rows if row.find_all("td")]
+    rows = table.find_all("tr")[1:]  # 첫 줄은 헤더
+
+    steps = []
+    for row in rows:
+        tds = row.find_all("td")
+        if len(tds) > 1:
+            steps.append(tds[1].get_text(strip=True))
+
     return steps
+
 
 def delete_notion_page(page_id):
     notion.pages.update(page_id=page_id, archived=True)
