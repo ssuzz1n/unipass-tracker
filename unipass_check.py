@@ -46,21 +46,34 @@ def get_tracking_items():
             items.append((customs_code, invoice_no, page_id, full_url, name_text))
     return items
 
-def check_status(customs_code, invoice_no):
-    url = f"https://unipass.customs.go.kr/csp/index.do"
-    data = {
-        "cargMtNo": invoice_no,
-        "brCd": customs_code,
-        "cargTp": "1"
-    }
-    headers = {"Content-Type": "application/x-www-form-urlencoded"}
-    res = requests.post(url, data=data, headers=headers)
-    soup = BeautifulSoup(res.text, "html.parser")
-    table = soup.find("table", class_="table")
-    if not table:
-        print(f"[❌ 처리단계 없음] {invoice_no}")
+def check_status(code, invoice):
+    url = f"https://asap-china.com/guide/unipass_delivery.php?code={code}&invoice={invoice}"
+    try:
+        response = requests.get(url, timeout=10)
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        # 모든 테이블을 가져오고 두 번째 테이블을 선택
+        tables = soup.find_all("table")
+        if len(tables) < 2:
+            print(f"[❌ 처리단계 테이블 없음] {invoice}")
+            return []
+
+        status_table = tables[1]  # 두 번째 테이블 (0-indexed)
+        rows = status_table.find_all("tr")[1:]  # 헤더 제외
+        status_list = []
+        for row in rows:
+            cols = row.find_all("td")
+            if len(cols) >= 2:
+                status_list.append(cols[1].get_text(strip=True))  # 두 번째 컬럼이 '처리단계'
+
+        if not status_list:
+            print(f"[❌ 처리단계 없음] {invoice}")
+        return status_list
+
+    except Exception as e:
+        print(f"[⚠️ 조회 실패] {invoice} / 오류: {e}")
         return []
-    return [row.text.strip() for row in table.find_all("td") if row.text.strip()]
+
 
 def send_email(subject, body):
     msg = MIMEText(body)
