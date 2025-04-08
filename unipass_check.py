@@ -76,15 +76,12 @@ def main():
     found_items = []
 
     for code, invoice, page_id, url, name in items:
+        print(f"[🔍 검사 중] {invoice} / {name} / 링크: {url}")  # 👉 이 줄 추가!
         steps = check_unipass_status(code, invoice)
-        if not steps:
-            continue
         if "반입신고" in steps:
             found_items.append((invoice, url, name))
             delete_notion_page(page_id)
             print(f"[🔔 반입신고 확인됨] {invoice} / 삭제됨")
-        else:
-            print(f"[📄 반입신고 미포함] {invoice} / 현재단계: {steps[-1]}")
 
     if found_items:
         subject = "[📦 반입신고 알림] 유니패스 통관 처리 완료"
@@ -94,6 +91,7 @@ def main():
         send_email(subject, body)
     else:
         print("[ℹ️ 반입신고 없음] 메일 전송 생략")
+
 
 if __name__ == "__main__":
     main()
