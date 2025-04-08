@@ -95,7 +95,11 @@ def main():
         subject = "[📦 반입신고 알림] 유니패스 통관 처리 완료"
         body = "다음 송장이 '반입신고' 단계에 도달했습니다:\n\n"
         for invoice, url, name in found_items:
-            body += f"- {name} 님 / 송장번호: {invoice}\n  ▶ 링크: {url}\n\n"
+            body += f"- {name} 님 / 송장번호: {invoice}\n"
+            body += f"  ▶ 링크: {url}\n\n"
+        body += "📮 [스마트스토어 송장 입력 바로가기]\n"
+        body += "👉 https://sell.smartstore.naver.com/#/naverpay/sale/delivery/situation?summaryInfoType=DELIVERING\n\n"
+        body += "💡 스마트스토어에서 위 송장번호를 복사하여 검색 후 CJ 운송장으로 수정해주세요!"
         send_email(subject, body)
     else:
         print("[ℹ️ 반입신고 없음] 메일 전송 생략")
