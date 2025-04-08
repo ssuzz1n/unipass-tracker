@@ -38,12 +38,13 @@ def check_unipass_status(code, invoice):
     url = f"https://asap-china.com/guide/unipass_delivery.php?code={code}&invoice={invoice}"
     response = requests.get(url)
     soup = BeautifulSoup(response.text, "html.parser")
-    table = soup.find("table", style=lambda v: v and "margin:0 auto" in v)
+    tables = soup.find_all("table", style=lambda v: v and "margin:0 auto" in v)
 
-    if not table:
-        print(f"[❌ 처리단계 없음] {invoice}")
+    if len(tables) < 2:
+        print(f"[❌ 처리단계 테이블 없음] {invoice}")
         return []
 
+    table = tables[1]  # 두 번째 테이블이 처리단계
     rows = table.find_all("tr")[1:]  # 첫 줄은 헤더
     if not rows:
         print(f"[⚠️ 처리단계 테이블은 있지만 내용 없음] {invoice}")
@@ -53,10 +54,12 @@ def check_unipass_status(code, invoice):
     for row in rows:
         tds = row.find_all("td")
         if len(tds) > 1:
-            steps.append(tds[1].get_text(strip=True))
+            step = tds[1].get_text(strip=True)
+            steps.append(step)
 
     print(f"[✅ 처리단계 감지] {invoice} ▶ {steps}")
     return steps
+
 
 
 def delete_notion_page(page_id):
