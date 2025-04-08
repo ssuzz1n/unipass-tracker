@@ -49,10 +49,13 @@ def check_unipass_status(code, invoice):
     steps = []
     for row in rows:
         tds = row.find_all("td")
-        if len(tds) >= 2:
+        if len(tds) > 1:
             steps.append(tds[1].get_text(strip=True))
 
+    print(f"[✅ 처리단계 감지] {invoice} ▶ {steps}")  # 🔥 이 줄 추가
+
     return steps
+
 
 def delete_notion_page(page_id):
     notion.pages.update(page_id=page_id, archived=True)
