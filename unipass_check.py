@@ -52,19 +52,22 @@ def check_status(code, invoice):
         response = requests.get(url, timeout=10)
         soup = BeautifulSoup(response.text, "html.parser")
 
-        # 모든 테이블을 가져오고 두 번째 테이블을 선택
         tables = soup.find_all("table")
+        print(f"[DEBUG] 테이블 개수: {len(tables)}")  # 디버깅용
+
         if len(tables) < 2:
             print(f"[❌ 처리단계 테이블 없음] {invoice}")
             return []
 
-        status_table = tables[1]  # 두 번째 테이블 (0-indexed)
-        rows = status_table.find_all("tr")[1:]  # 헤더 제외
+        status_table = tables[1]
+        rows = status_table.find_all("tr")[1:]
         status_list = []
+
         for row in rows:
             cols = row.find_all("td")
             if len(cols) >= 2:
-                status_list.append(cols[1].get_text(strip=True))  # 두 번째 컬럼이 '처리단계'
+                step = cols[1].get_text(strip=True)
+                status_list.append(step)
 
         if not status_list:
             print(f"[❌ 처리단계 없음] {invoice}")
