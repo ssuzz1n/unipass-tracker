@@ -1,4 +1,5 @@
 import os
+import re
 import requests
 import json
 import smtplib
@@ -26,6 +27,19 @@ def load_status():
 def save_status(data):
     with open(STATUS_FILE, "w") as f:
         json.dump(data, f)
+
+
+def parse_unipass_url(url):
+    """
+    Unipass URL에서 code와 invoice 값을 추출
+    예: https://asap-china.com/guide/unipass_delivery.php?code=GR1234567890&invoice=987654321
+    """
+    match = re.search(r"code=([\w\d]+)&invoice=(\d+)", url)
+    if match:
+        return match.group(1), match.group(2)
+    else:
+        print(f"[⚠️ 유효하지 않은 링크 형식] {url}")
+        return None, None
 
 def get_tracking_items():
     response = notion.databases.query(database_id=NOTION_DATABASE_ID)
