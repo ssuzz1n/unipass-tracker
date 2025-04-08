@@ -7,10 +7,8 @@ from email.utils import formataddr
 from dotenv import load_dotenv
 import os
 import re
-import time
 from notion_client import Client  # Notion SDK
 
-LOCK_FILE = "/tmp/unipass_lock"
 
 # .env 로드
 load_dotenv()
@@ -40,18 +38,6 @@ except Exception as e:
 
 # 상태 저장 파일
 STATUS_FILE = "unipass_status.json"
-
-def already_running():
-    if os.path.exists(LOCK_FILE):
-        with open(LOCK_FILE, "r") as f:
-            last_time = float(f.read())
-        if time.time() - last_time < 300:  # 5분 안에 또 실행되면
-            print("[⏹️ 중복 실행 방지] 최근 실행됨. 종료.")
-            return True
-
-    with open(LOCK_FILE, "w") as f:
-        f.write(str(time.time()))
-    return False
 
 def load_status():
     if os.path.exists(STATUS_FILE):
@@ -180,7 +166,4 @@ def main():
 
 if __name__ == "__main__":
     print("[✅ 유니패스 자동 추적 시작]")
-    if already_running():
-        exit()
-    
     main()
