@@ -45,6 +45,9 @@ def check_unipass_status(code, invoice):
         return []
 
     rows = table.find_all("tr")[1:]  # 첫 줄은 헤더
+    if not rows:
+        print(f"[⚠️ 처리단계 테이블은 있지만 내용 없음] {invoice}")
+        return []
 
     steps = []
     for row in rows:
@@ -52,8 +55,7 @@ def check_unipass_status(code, invoice):
         if len(tds) > 1:
             steps.append(tds[1].get_text(strip=True))
 
-    print(f"[✅ 처리단계 감지] {invoice} ▶ {steps}")  # 🔥 이 줄 추가
-
+    print(f"[✅ 처리단계 감지] {invoice} ▶ {steps}")
     return steps
 
 
