@@ -11,7 +11,7 @@ EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 
 # 🔗 타오바오 상품 URL (👉 원하는 상품 링크로 바꿔서 실행)
-TAOBAO_URL = "https://item.taobao.com/item.htm?id=783169758299"
+TAOBAO_URL = "https://item.taobao.com/item.htm?id=891624140308"
 
 # ===================== 🖼️ 대표 이미지 추출 함수 =====================
 def extract_images(url):
