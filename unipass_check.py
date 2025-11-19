@@ -18,7 +18,19 @@ def get_tracking_items():
     """Notion DB에서 조회링크, 성함, page_id 가져오기"""
     url = f"https://api.notion.com/v1/databases/{NOTION_DATABASE_ID}/query"
     response = requests.post(url, headers=NOTION_HEADERS, json={})
-    data = response.json()
+
+    print("[DEBUG] Notion status:", response.status_code)
+    try:
+        data = response.json()
+    except Exception as e:
+        print("[DEBUG] Notion 응답 JSON 파싱 실패:", e, response.text)
+        return []
+
+    # ✅ 에러 응답일 때 바로 내용 찍고 종료
+    if "results" not in data:
+        print("[DEBUG] Notion 응답에 'results' 키가 없음. 전체 응답:")
+        print(data)
+        return []
 
     items = []
     for result in data["results"]:
@@ -37,6 +49,7 @@ def get_tracking_items():
             items.append((customs_code, invoice_no, page_id, full_url, name_text))
 
     return items
+
 
 def check_unipass_status(code, invoice):
     """유니패스 처리단계 가져오기"""
