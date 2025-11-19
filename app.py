@@ -2,7 +2,7 @@ from flask import Flask
 import threading
 import time
 import schedule
-from main import main  # 찡의 기존 자동화 함수
+from unipass_check import main  # 찡의 기존 자동화 함수
 
 app = Flask(__name__)
 
