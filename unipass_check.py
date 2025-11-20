@@ -14,6 +14,7 @@ NOTION_HEADERS = {
     "Content-Type": "application/json",
 }
 
+
 def get_tracking_items():
     """Notion DB에서 조회링크, 성함, page_id 가져오기"""
     url = f"https://api.notion.com/v1/databases/{NOTION_DATABASE_ID}/query"
@@ -110,21 +111,24 @@ def main():
 
     for code, invoice, page_id, url, name in items:
         print(f"[🔍 검사 중] {invoice} / {name}")
-        steps = check_unipass_status(code, invoice)  
+        steps = check_unipass_status(code, invoice)
+
         # steps = [{"step": "...", "time": "..."}, ...] 구조
         target = next(
             (s for s in steps if s["step"] == "통관목록심사완료"),
             None
         )
+
         if target:
             processed_at = target["time"]  # 처리일시
             print(f"[🎉 통관목록심사완료 발견] {invoice} / {name} / {processed_at}")
             update_notion_status(page_id, processed_at)
             any_found = True
-            
-            
-        if not any_found:
-        print("[ℹ️ 반입신고 없음]")
+
+    # 🔹 for 루프 바깥에서 실행되어야 함 (들여쓰기 주의!)
+    if not any_found:
+        print("[ℹ️ 통관목록심사완료 없음]")
+
 
 if __name__ == "__main__":
     main()
