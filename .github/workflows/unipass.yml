@@ -2,10 +2,11 @@ name: Unipass Checker
 
 on:
   schedule:
-    - cron: "0 0 * * *"    # UTC 00:00 → 한국 09:00
-    - cron: "0 12 * * *"   # UTC 12:00 → 한국 21:00
+    - cron: "0 0 * * *"    # KST 09:00
+    - cron: "0 6 * * *"    # KST 15:00
+    - cron: "0 12 * * *"   # KST 21:00
   workflow_dispatch:
-
+  
 jobs:
   run-script:
     runs-on: ubuntu-latest
