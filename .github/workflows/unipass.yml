@@ -2,7 +2,7 @@ name: Unipass Checker
 
 on:
   schedule:
-    - cron: "0 2 * * *"    # KST 11:00
+    - cron: "0 1 * * *"    # KST 10:00
     - cron: "0 13 * * *"   # KST 22:00
   workflow_dispatch:
   
