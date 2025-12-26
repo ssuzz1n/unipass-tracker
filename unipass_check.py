@@ -219,7 +219,7 @@ def main():
             print(f"[⚠️ 알 수 없는 형식] {name} / {raw}")
             continue
 
-        target = next((s for s in steps if s["step"] == "입항적재화물목록 운항정보 정정"), None)
+        target = next((s for s in steps if s["step"] == "통관목록심사완료"), None)
         if target:
             processed_at = target["time"]
             key = it.get("invoice") or it.get("bl_no") or raw
