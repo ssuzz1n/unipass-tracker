@@ -1,10 +1,10 @@
-name: Taobao Stock Checker
+name: Taobao Stock Check
 
 on:
   workflow_dispatch: {}
-  # cron은 나중에 추가해도 됨
+  # cron은 나중에 붙이면 됨
   # schedule:
-  #   - cron: "0 */6 * * *"
+  #   - cron: "*/30 * * * *"
 
 jobs:
   run:
@@ -26,4 +26,4 @@ jobs:
 
       - name: Run script
         run: |
-          taobao_stock_check.py
+          python taobao_stock_check.py
