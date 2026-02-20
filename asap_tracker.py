@@ -91,7 +91,7 @@ def add_to_notion(link, receiver=""):
 def main():
     last_invoice = load_last_invoice()
     print("📌 현재 기준:", last_invoice)
-    print(html[:1000])
+   
 
     session = login()
 
@@ -115,6 +115,7 @@ def main():
 
         res = session.post(ASAP_AJAX_URL, data=payload)
         html = res.text
+        print(html[:1000])
         orders = parse_orders(html)
 
         # 주문이 아예 없으면 종료
