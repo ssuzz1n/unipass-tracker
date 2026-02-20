@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import os
 import json
+from datetime import datetime, timedelta
 
 ASAP_LOGIN_URL = "https://asap-china.com/elpisbbs/login.php"
 ASAP_AJAX_URL = "https://asap-china.com/elpisbbs/ajax.nt_order_list_member.php"
@@ -98,11 +99,17 @@ def main():
     newest_invoice = None
     stop = False
 
+    today = datetime.today()
+    sdate = (today - timedelta(days=30)).strftime("%Y-%m-%d")
+    edate = today.strftime("%Y-%m-%d")
+
     while True:
         payload = {
             "last": offset,
             "limit": limit,
             "mb_id": ASAP_ID,
+            "sdate": sdate,
+            "edate": edate,
         }
 
         res = session.post(ASAP_AJAX_URL, data=payload)
