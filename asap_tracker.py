@@ -92,21 +92,47 @@ def main():
     print("📌 현재 기준:", last_invoice)
 
     session = login()
-    html = fetch_latest(session)
-    orders = parse_orders(html)
 
+    offset = 0
+    limit = 20
     newest_invoice = None
+    stop = False
 
-    for idx, order in enumerate(orders):
-        if idx == 0:
-            newest_invoice = order["invoice"]
+    while True:
+        payload = {
+            "last": offset,
+            "limit": limit,
+            "mb_id": ASAP_ID,
+        }
 
-        if order["invoice"] == last_invoice:
-            print("🛑 기준 도달. 중단.")
+        res = session.post(ASAP_AJAX_URL, data=payload)
+        html = res.text
+        orders = parse_orders(html)
+
+        # 주문이 아예 없으면 종료
+        if not orders:
+            print("📭 더 이상 주문 없음.")
             break
 
-        print("➕ 추가:", order["invoice"])
-        add_to_notion(order["link"])
+        for idx, order in enumerate(orders):
+
+            # 첫 페이지 첫 주문 = 최신 기준
+            if offset == 0 and idx == 0:
+                newest_invoice = order["invoice"]
+
+            if order["invoice"] == last_invoice:
+                print("🛑 기준 도달. 중단.")
+                stop = True
+                break
+
+            print("➕ 추가:", order["invoice"])
+            add_to_notion(order["link"])
+
+        if stop:
+            break
+
+        # 다음 페이지로 이동
+        offset += limit
 
     if newest_invoice:
         save_last_invoice(newest_invoice)
