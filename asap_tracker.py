@@ -23,9 +23,11 @@ LAST_FILE = "last_invoice.json"
 
 
 def load_last_invoice():
+    if not os.path.exists(LAST_FILE):
+        return None
     with open(LAST_FILE, "r") as f:
         data = json.load(f)
-    return data["last_invoice"]
+    return data.get("last_invoice")
 
 
 def save_last_invoice(invoice):
@@ -35,33 +37,28 @@ def save_last_invoice(invoice):
 
 def login():
     session = requests.Session()
+
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Referer": ASAP_LOGIN_URL,
+    }
+
     payload = {
         "mb_id": ASAP_ID,
         "mb_password": ASAP_PW,
     }
-    session.post(ASAP_LOGIN_URL, data=payload)
+
+    res = session.post(ASAP_LOGIN_URL, data=payload, headers=headers)
+    print("🔐 로그인 응답코드:", res.status_code)
+    print("🍪 로그인 쿠키:", session.cookies.get_dict())
+
     return session
-
-
-def fetch_latest(session):
-    payload = {
-        "last": 0,
-        "limit": 20,
-        "mb_id": ASAP_ID,
-    }
-    res = session.post(
-    ASAP_AJAX_URL,
-    data=payload,
-    headers=headers
-    )
-    return res.text
 
 
 def parse_orders(html):
     soup = BeautifulSoup(html, "html.parser")
     results = []
 
-    # 🔥 여기 부분은 실제 html 구조에 맞게 수정 필요
     for link in soup.find_all("a"):
         href = link.get("href")
         text = link.get_text(strip=True)
@@ -95,12 +92,6 @@ def add_to_notion(link, receiver=""):
 def main():
     last_invoice = load_last_invoice()
     print("📌 현재 기준:", last_invoice)
-    
-    headers = {
-    "User-Agent": "Mozilla/5.0",
-    "X-Requested-With": "XMLHttpRequest",
-    "Referer": "https://asap-china.com/mypage/service_list.php#page1", 
-    }
 
     session = login()
 
@@ -122,7 +113,17 @@ def main():
             "edate": edate,
         }
 
-        res = session.post(ASAP_AJAX_URL, data=payload)
+        headers = {
+            "User-Agent": "Mozilla/5.0",
+            "X-Requested-With": "XMLHttpRequest",
+            "Referer": "https://asap-china.com/mypage/service_list.php"
+        }
+
+        res = session.post(
+            ASAP_AJAX_URL,
+            data=payload,
+            headers=headers
+        )
 
         print("📡 응답코드:", res.status_code)
 
@@ -132,11 +133,9 @@ def main():
 
         html = res.text
 
-        # 🔥 여기서 HTML 구조 확인
-        from bs4 import BeautifulSoup
-        soup = BeautifulSoup(html, "html.parser")
-        print("📄 응답 일부:")
-        print(soup.prettify()[:1000])
+        if not html.strip():
+            print("📭 응답이 비어있음. 종료.")
+            break
 
         orders = parse_orders(html)
 
@@ -149,7 +148,7 @@ def main():
             if offset == 0 and idx == 0:
                 newest_invoice = order["invoice"]
 
-            if order["invoice"] == last_invoice:
+            if last_invoice and order["invoice"] == last_invoice:
                 print("🛑 기준 도달. 중단.")
                 stop = True
                 break
@@ -165,6 +164,7 @@ def main():
     if newest_invoice:
         save_last_invoice(newest_invoice)
         print("✅ 기준 업데이트:", newest_invoice)
+
 
 if __name__ == "__main__":
     main()
