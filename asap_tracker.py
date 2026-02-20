@@ -91,7 +91,6 @@ def add_to_notion(link, receiver=""):
 def main():
     last_invoice = load_last_invoice()
     print("📌 현재 기준:", last_invoice)
-   
 
     session = login()
 
@@ -114,18 +113,29 @@ def main():
         }
 
         res = session.post(ASAP_AJAX_URL, data=payload)
+
+        print("📡 응답코드:", res.status_code)
+
+        if res.status_code != 200:
+            print("❌ 요청 실패")
+            break
+
         html = res.text
+
+        # 🔥 여기서 HTML 구조 확인
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(html, "html.parser")
+        print("📄 응답 일부:")
         print(soup.prettify()[:1000])
+
         orders = parse_orders(html)
 
-        # 주문이 아예 없으면 종료
         if not orders:
             print("📭 더 이상 주문 없음.")
             break
 
         for idx, order in enumerate(orders):
 
-            # 첫 페이지 첫 주문 = 최신 기준
             if offset == 0 and idx == 0:
                 newest_invoice = order["invoice"]
 
@@ -140,16 +150,11 @@ def main():
         if stop:
             break
 
-        # 다음 페이지로 이동
         offset += limit
 
     if newest_invoice:
         save_last_invoice(newest_invoice)
         print("✅ 기준 업데이트:", newest_invoice)
-
-
-
-
 
 if __name__ == "__main__":
     main()
