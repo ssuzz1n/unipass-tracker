@@ -94,6 +94,7 @@ def main():
     print("📌 현재 기준:", last_invoice)
 
     session = login()
+    # 🟢 서비스 페이지 먼저 방문 (세션 완성용)
     session.get("https://asap-china.com/mypage/service_list.php")
 
     offset = 0
@@ -106,12 +107,26 @@ def main():
     edate = today.strftime("%Y-%m-%d")
 
     while True:
-        payload = {
+        # 🟢 AJAX 요청 파라미터 (Query String)
+        params = {
             "last": offset,
             "limit": limit,
-            "mb_id": ASAP_ID,
+            "find": "",
+            "value": "",
+            "or_de_no": "",
+            "state": "",
             "sdate": sdate,
             "edate": edate,
+            "mb_id": ASAP_ID,
+            "type": "",
+            "last_code": "",
+            "it_code": "",
+            "dtype": "",
+            "gr_output_stay_type": "",
+            "gr_var5": "",
+            "gr_unipass_result": "",
+            "gr_fltno": "",
+            "gr_fltno2": "",
         }
 
         headers = {
@@ -122,9 +137,11 @@ def main():
             "Accept": "text/html, */*; q=0.01",
         }
 
+        # 🟢 POST body 없이 params로 전달
         res = session.post(
             ASAP_AJAX_URL,
-            headers=headers
+            headers=headers,
+            params=params
         )
 
         print("📡 응답코드:", res.status_code)
@@ -146,7 +163,6 @@ def main():
             break
 
         for idx, order in enumerate(orders):
-
             if offset == 0 and idx == 0:
                 newest_invoice = order["invoice"]
 
