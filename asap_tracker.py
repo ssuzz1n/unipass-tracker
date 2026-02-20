@@ -91,6 +91,7 @@ def add_to_notion(link, receiver=""):
 def main():
     last_invoice = load_last_invoice()
     print("📌 현재 기준:", last_invoice)
+    print(html[:1000])
 
     session = login()
 
@@ -144,6 +145,9 @@ def main():
     if newest_invoice:
         save_last_invoice(newest_invoice)
         print("✅ 기준 업데이트:", newest_invoice)
+
+
+
 
 
 if __name__ == "__main__":
