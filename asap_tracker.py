@@ -51,6 +51,7 @@ def login():
     res = session.post(ASAP_LOGIN_URL, data=payload, headers=headers)
     print("🔐 로그인 응답코드:", res.status_code)
     print("🍪 로그인 쿠키:", session.cookies.get_dict())
+    session.get("https://asap-china.com/mypage/service_list.php") 
 
     return session
 
@@ -114,14 +115,15 @@ def main():
         }
 
         headers = {
-            "User-Agent": "Mozilla/5.0",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
+            "Referer": "https://asap-china.com/mypage/service_list.php",
+            "Origin": "https://asap-china.com",
             "X-Requested-With": "XMLHttpRequest",
-            "Referer": "https://asap-china.com/mypage/service_list.php"
+            "Accept": "text/html, */*; q=0.01",
         }
 
         res = session.post(
             ASAP_AJAX_URL,
-            data=payload,
             headers=headers
         )
 
