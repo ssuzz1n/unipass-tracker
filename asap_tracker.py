@@ -51,7 +51,6 @@ def login():
     res = session.post(ASAP_LOGIN_URL, data=payload, headers=headers)
     print("🔐 로그인 응답코드:", res.status_code)
     print("🍪 로그인 쿠키:", session.cookies.get_dict())
-    session.get("https://asap-china.com/mypage/service_list.php") 
 
     return session
 
@@ -95,6 +94,7 @@ def main():
     print("📌 현재 기준:", last_invoice)
 
     session = login()
+    session.get("https://asap-china.com/mypage/service_list.php")
 
     offset = 0
     limit = 20
