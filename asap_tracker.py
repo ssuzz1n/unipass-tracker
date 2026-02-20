@@ -99,7 +99,7 @@ def main():
     headers = {
     "User-Agent": "Mozilla/5.0",
     "X-Requested-With": "XMLHttpRequest",
-    "Referer": "https://asap-somepage-url",  # 로그인 후 실제 페이지 주소로 바꿔
+    "Referer": "https://asap-china.com/mypage/service_list.php#page1", 
     }
 
     session = login()
