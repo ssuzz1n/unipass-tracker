@@ -49,11 +49,6 @@ def fetch_latest(session):
         "limit": 20,
         "mb_id": ASAP_ID,
     }
-    headers = {
-    "User-Agent": "Mozilla/5.0",
-    "X-Requested-With": "XMLHttpRequest",
-    "Referer": "https://asap-somepage-url",  # 로그인 후 실제 페이지 주소로 바꿔
-    }
     res = session.post(
     ASAP_AJAX_URL,
     data=payload,
@@ -100,6 +95,12 @@ def add_to_notion(link, receiver=""):
 def main():
     last_invoice = load_last_invoice()
     print("📌 현재 기준:", last_invoice)
+    
+    headers = {
+    "User-Agent": "Mozilla/5.0",
+    "X-Requested-With": "XMLHttpRequest",
+    "Referer": "https://asap-somepage-url",  # 로그인 후 실제 페이지 주소로 바꿔
+    }
 
     session = login()
 
