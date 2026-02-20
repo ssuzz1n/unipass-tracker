@@ -115,7 +115,7 @@ def main():
 
         res = session.post(ASAP_AJAX_URL, data=payload)
         html = res.text
-        print(html[:1000])
+        print(soup.prettify()[:1000])
         orders = parse_orders(html)
 
         # 주문이 아예 없으면 종료
