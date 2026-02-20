@@ -1,0 +1,36 @@
+name: ASAP Tracker
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run ASAP Tracker Script
+        env:
+          ASAP_ID: ${{ secrets.ASAP_ID }}
+          ASAP_PW: ${{ secrets.ASAP_PW }}
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+        run: python asap_tracker.py
+
+      - name: Commit updated last_invoice.json
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          git add last_invoice.json
+          git diff --cached --quiet || git commit -m "Auto update last invoice"
+          git push
