@@ -32,13 +32,7 @@ def get_last_link_from_notion():
     url = f"https://api.notion.com/v1/databases/{NOTION_DATABASE_ID}/query"
 
     payload = {
-        "page_size": 100,
-        "sorts": [
-            {
-                "property": "조회링크",
-                "direction": "descending"
-            }
-        ]
+        "page_size": 100  # 최대한 많이 가져오기
     }
 
     res = requests.post(url, headers=NOTION_HEADERS, json=payload)
@@ -55,8 +49,15 @@ def get_last_link_from_notion():
     if not results:
         return None
 
-    # 🔥 정렬된 상태에서 아래부터 탐색
-    for page in results:
+    # 🔥 최신순 정렬 (created_time 기준)
+    results_sorted = sorted(
+        results,
+        key=lambda x: x["created_time"],
+        reverse=True
+    )
+
+    # 🔥 아래에서 위로 탐색하면서 링크 있는 첫 데이터 찾기
+    for page in results_sorted:
 
         props = page.get("properties", {})
 
@@ -66,9 +67,10 @@ def get_last_link_from_notion():
             continue
 
         if url_property and url_property.strip() != "":
-            print("✅ 기준 링크 발견:", url_property.strip())
+            print("✅ 기준 링크 발견:", url_property)
             return url_property.strip()
 
+    # 🔥 끝까지 못 찾으면
     print("⚠ 기준이 될 조회링크 없음")
     return None
 
@@ -77,14 +79,20 @@ def get_last_link_from_notion():
 # ==================================================
 
 def login():
+
     session = requests.Session()
+
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Referer": ASAP_LOGIN_URL,
+    }
 
     payload = {
         "mb_id": ASAP_ID,
         "mb_password": ASAP_PW,
     }
 
-    res = session.post(ASAP_LOGIN_URL, data=payload)
+    res = session.post(ASAP_LOGIN_URL, data=payload, headers=headers)
 
     print("🔐 로그인 응답코드:", res.status_code)
 
@@ -95,7 +103,7 @@ def login():
 
 
 # ==================================================
-# 🔥 파싱
+# 🔥 HTML 파싱
 # ==================================================
 
 def parse_orders(html):
@@ -112,25 +120,32 @@ def parse_orders(html):
 
         link = a["href"]
 
-        if not link.startswith("http"):
-            link = "https://www.asap-china.com" + link
+        if link.startswith("http"):
+            full_link = link
+        else:
+            full_link = "https://www.asap-china.com" + link
 
         name = ""
-        tr = a.find_parent("tr")
 
-        if tr:
-            next_tr = tr.find_next_sibling("tr")
+        current_tr = a.find_parent("tr")
+
+        if current_tr:
+            next_tr = current_tr.find_next_sibling("tr")
+
             if next_tr:
                 p_tags = next_tr.find_all("p")
+
                 if len(p_tags) >= 2:
                     name = p_tags[1].get_text(strip=True)
+                elif len(p_tags) == 1:
+                    name = p_tags[0].get_text(strip=True)
 
         if "배송" in name:
             name = ""
 
         orders.append({
             "invoice": invoice,
-            "link": link.strip(),
+            "link": full_link,
             "name": name
         })
 
@@ -170,9 +185,9 @@ def add_to_notion(link, receiver):
 
 def main():
 
+    # ✅ 노션에서 기준 링크 가져오기
     last_link = get_last_link_from_notion()
-
-    print("📌 기준 링크:", last_link)
+    print("📌 노션 기준 링크:", last_link)
 
     session = login()
     if not session:
@@ -180,46 +195,74 @@ def main():
 
     session.get("https://asap-china.com/mypage/service_list.php")
 
+    offset = 0
+    limit = 20
+    newest_link = None
+
     today = datetime.today()
     sdate = (today - timedelta(days=30)).strftime("%Y-%m-%d")
     edate = today.strftime("%Y-%m-%d")
 
-    res = session.post(
-        ASAP_AJAX_URL,
-        headers={
-            "X-Requested-With": "XMLHttpRequest"
-        },
-        data={
-            "last": 0,
-            "limit": 200,
-            "sdate": sdate,
+    while True:
+
+        params = {
+            "last": offset,
+            "limit": limit,
+            "sdate": "2026-02-20",
+            #"sdate": sdate,
             "edate": edate,
-            "mb_id": ASAP_ID
+            "mb_id": ASAP_ID,
         }
-    )
 
-    if res.status_code != 200:
-        print("❌ 사이트 요청 실패")
-        return
+        headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Referer": "https://asap-china.com/mypage/service_list.php",
+            "X-Requested-With": "XMLHttpRequest",
+        }
 
-    orders = parse_orders(res.text)
+        res = session.post(
+            ASAP_AJAX_URL,
+            headers=headers,
+            params=params
+        )
 
-    stop = False
-
-    for order in orders:
-
-        link = order["link"]
-        invoice = order["invoice"]
-        name = order["name"]
-
-        # ✅ 기준 만나면 즉시 중단
-        if last_link and link == last_link:
-            print("🛑 기준 링크 도달 -> 중단")
-            stop = True
+        if res.status_code != 200:
             break
 
-        print("➕ 저장:", invoice, name)
-        add_to_notion(link, name)
+        html = res.text
+
+        if not html.strip():
+            break
+
+        orders = parse_orders(html)
+        orders = list(reversed(orders))
+        if not orders:
+            break
+
+        stop = False
+
+        for order in orders:
+
+            invoice = order["invoice"]
+            link = order["link"]
+            name = order["name"]
+
+            if not newest_link:
+                newest_link = link
+
+            # ✅ 기준 링크 발견하면 중단
+            if last_link and link == last_link:
+                print("🛑 기준 링크 발견 -> 중단")
+                stop = True
+                break
+
+            print("➕ 저장:", invoice, name)
+            add_to_notion(link, name)
+
+        if stop:
+            break
+
+        offset += limit
 
     print("✅ 실행 완료")
 
