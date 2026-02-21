@@ -19,31 +19,68 @@ NOTION_HEADERS = {
     "Content-Type": "application/json",
 }
 
-LAST_FILE = "last_invoice.json"
 
+# ==================================================
+# 🔥 노션에서 마지막 기준 가져오기
+# ==================================================
 
-# =============================
-# 🔹 기준 관리
-# =============================
+def get_last_invoice_from_notion():
 
-def load_last_invoice():
-    if not os.path.exists(LAST_FILE):
+    if not NOTION_DATABASE_ID:
+        print("❌ 노션 DB ID 없음")
         return None
-    with open(LAST_FILE, "r") as f:
-        data = json.load(f)
-    return data.get("last_invoice")
+
+    url = f"https://api.notion.com/v1/databases/{NOTION_DATABASE_ID}/query"
+
+    payload = {
+        "page_size": 1,
+        "sorts": [
+            {
+                "property": "created_time",
+                "direction": "descending"
+            }
+        ]
+    }
+
+    res = requests.post(url, headers=NOTION_HEADERS, json=payload)
+
+    if res.status_code != 200:
+        print("❌ 노션 기준 조회 실패")
+        return None
+
+    data = res.json()
+    results = data.get("results", [])
+
+    if not results:
+        return None
+
+    page = results[0]
+    props = page["properties"]
+
+    # 🔥 조회링크 값 가져오기
+    try:
+        url_property = props["조회링크"]["url"]
+    except:
+        return None
+
+    if not url_property:
+        return None
+
+    # 🔥 url에서 invoice 번호 추출
+    invoice = url_property.split("invoice=")[-1]
+
+    if invoice.isdigit():
+        return invoice
+
+    return None
 
 
-def save_last_invoice(invoice):
-    with open(LAST_FILE, "w") as f:
-        json.dump({"last_invoice": invoice}, f, indent=2)
-
-
-# =============================
-# 🔹 로그인
-# =============================
+# ==================================================
+# 🔥 로그인
+# ==================================================
 
 def login():
+
     session = requests.Session()
 
     headers = {
@@ -59,23 +96,19 @@ def login():
     res = session.post(ASAP_LOGIN_URL, data=payload, headers=headers)
 
     print("🔐 로그인 응답코드:", res.status_code)
-    print("🍪 로그인 쿠키:", session.cookies.get_dict())
-
-    html = res.text
-    print("로그인 HTML 일부:", html[:500])
 
     if res.status_code != 200:
-        print("❌ 로그인 실패")
         return None
 
     return session
 
 
-# =============================
+# ==================================================
 # 🔥 파싱
-# =============================
+# ==================================================
 
 def parse_orders(html):
+
     soup = BeautifulSoup(html, "html.parser")
     orders = []
 
@@ -105,6 +138,7 @@ def parse_orders(html):
 
                 if len(p_tags) >= 2:
                     name = p_tags[1].get_text(strip=True)
+
                 elif len(p_tags) == 1:
                     name = p_tags[0].get_text(strip=True)
 
@@ -120,9 +154,9 @@ def parse_orders(html):
     return orders
 
 
-# =============================
-# 🔹 노션 저장
-# =============================
+# ==================================================
+# 🔥 노션 저장
+# ==================================================
 
 def add_to_notion(link, receiver):
 
@@ -147,14 +181,16 @@ def add_to_notion(link, receiver):
     requests.post(url, headers=NOTION_HEADERS, json=payload)
 
 
-# =============================
+# ==================================================
 # 🔥 메인
-# =============================
+# ==================================================
 
 def main():
 
-    last_invoice = load_last_invoice()
-    print("📌 현재 기준:", last_invoice)
+    # ✅ 기준을 이제 노션에서 가져옴
+    last_invoice = get_last_invoice_from_notion()
+
+    print("📌 노션 기준:", last_invoice)
 
     session = login()
     if not session:
@@ -192,8 +228,6 @@ def main():
             params=params
         )
 
-        print("📡 응답코드:", res.status_code)
-
         if res.status_code != 200:
             break
 
@@ -229,9 +263,8 @@ def main():
 
         break
 
-    if newest_invoice:
-        save_last_invoice(newest_invoice)
-        print("✅ 기준 업데이트:", newest_invoice)
+
+    print("✅ 실행 완료")
 
 
 if __name__ == "__main__":
