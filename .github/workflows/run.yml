@@ -1,8 +1,8 @@
-name: Run ASAP Tracker
+name: Run Script
 
 on:
   repository_dispatch:
-    types: [run-tracker]
+    types: [run-script]
 
 jobs:
   run:
