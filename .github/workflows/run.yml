@@ -23,4 +23,9 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run script
+        env:
+          ASAP_ID: ${{ secrets.ASAP_ID }}
+          ASAP_PW: ${{ secrets.ASAP_PW }}
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
         run: python asap_tracker.py
