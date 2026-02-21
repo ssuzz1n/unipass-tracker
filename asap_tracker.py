@@ -235,7 +235,6 @@ def main():
             break
 
         orders = parse_orders(html)
-        orders = list(reversed(orders))
         if not orders:
             break
 
