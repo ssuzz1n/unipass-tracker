@@ -43,6 +43,10 @@ def get_last_link_from_notion():
 
     res = requests.post(url, headers=NOTION_HEADERS, json=payload)
 
+    print("🔎 노션 API 응답코드:", res.status_code)
+    print("🔎 노션 API 응답:", res.text)
+
+
     if res.status_code != 200:
         print("❌ 노션 기준 조회 실패")
         return None
