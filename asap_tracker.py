@@ -72,37 +72,40 @@ def parse_orders(html):
     soup = BeautifulSoup(html, "html.parser")
     orders = []
 
-    # 🔥 송장 a 태그만 정확히 찾기
+    # 🔥 송장 a 태그만 찾기
     for a in soup.find_all("a", href=True):
 
         invoice = a.get_text(strip=True)
 
-        # 송장번호가 숫자일 때만 처리
         if not invoice.isdigit():
             continue
 
         link = a["href"]
 
-        # ✅ 링크 중복 방지
+        # ✅ 링크 정리
         if link.startswith("http"):
             full_link = link
         else:
             full_link = "https://www.asap-china.com" + link
 
-        # 🔥 같은 주문 블록에서 이름 찾기
+        # 🔥 이름을 "송장 아래에 있는 다음 tr"에서 찾기
         name = ""
 
-        block_td = a.find_parent("td")
-        if block_td:
-            # 주문 전체 블록 탐색
-            parent_tr = block_td.find_parent("tr")
-            if parent_tr:
-                # 그 tr 안에서 p 태그 찾기
-                p_tag = parent_tr.find("p")
-                if p_tag:
-                    name = p_tag.get_text(strip=True)
+        # a 태그가 속한 tr
+        current_tr = a.find_parent("tr")
 
-        # 🔥 배송대행이면 이름 제거
+        if current_tr:
+            # 그 tr 다음에 오는 tr을 찾는다
+            next_tr = current_tr.find_next_sibling("tr")
+
+            if next_tr:
+                # 그 다음 tr 안에서 p 태그 찾기
+                name_tag = next_tr.find("p")
+
+                if name_tag:
+                    name = name_tag.get_text(strip=True)
+
+        # 🔥 배송대행이면 제거
         if "배송" in name:
             name = ""
 
