@@ -57,45 +57,42 @@ def login():
     }
 
     res = session.post(ASAP_LOGIN_URL, data=payload, headers=headers)
-    
+
     print("🔐 로그인 응답코드:", res.status_code)
     print("🍪 로그인 쿠키:", session.cookies.get_dict())
-    html = res.text
-    print("받아온 HTML 일부:", html[:1000])
-    if not html.strip():
-        print("응답 비어있음. 종료.")
-        break
 
-    
+    html = res.text
+    print("로그인 HTML 일부:", html[:500])
+
+    if res.status_code != 200:
+        print("❌ 로그인 실패")
+        return None
+
     return session
 
 
 # =============================
-# 🔥 핵심 파싱 로직 (수정 완료)
+# 🔥 파싱
 # =============================
 
 def parse_orders(html):
     soup = BeautifulSoup(html, "html.parser")
     orders = []
 
-    # 🔥 송장 a 태그만 찾기
     for a in soup.find_all("a", href=True):
 
         invoice = a.get_text(strip=True)
 
-        # 송장번호가 숫자가 아니면 스킵
         if not invoice.isdigit():
             continue
 
         link = a["href"]
 
-        # ✅ 링크 중복 방지
         if link.startswith("http"):
             full_link = link
         else:
             full_link = "https://www.asap-china.com" + link
 
-        # 🔥 이름 추출 (다음 tr 안 p 태그 두 번째 값 사용)
         name = ""
 
         current_tr = a.find_parent("tr")
@@ -106,15 +103,11 @@ def parse_orders(html):
             if next_tr:
                 p_tags = next_tr.find_all("p")
 
-                # ✅ p가 2개 이상이면 두 번째 = 실제 이름
                 if len(p_tags) >= 2:
                     name = p_tags[1].get_text(strip=True)
-
-                # ✅ 혹시 하나만 있는 경우 대비
                 elif len(p_tags) == 1:
                     name = p_tags[0].get_text(strip=True)
 
-        # 🔥 배송대행이면 이름 제거
         if "배송" in name:
             name = ""
 
@@ -132,14 +125,17 @@ def parse_orders(html):
 # =============================
 
 def add_to_notion(link, receiver):
+
+    if not NOTION_DATABASE_ID:
+        print("❌ 노션 DB ID 없음")
+        return
+
     url = "https://api.notion.com/v1/pages"
 
     payload = {
         "parent": {"database_id": NOTION_DATABASE_ID},
         "properties": {
-            "조회링크": {
-                "url": link
-            },
+            "조회링크": {"url": link},
             "성함": {
                 "rich_text": [
                     {"text": {"content": receiver}}
@@ -152,7 +148,7 @@ def add_to_notion(link, receiver):
 
 
 # =============================
-# 🔥 메인 실행
+# 🔥 메인
 # =============================
 
 def main():
@@ -161,12 +157,14 @@ def main():
     print("📌 현재 기준:", last_invoice)
 
     session = login()
+    if not session:
+        return
+
     session.get("https://asap-china.com/mypage/service_list.php")
 
     offset = 0
     limit = 20
     newest_invoice = None
-    stop = False
 
     today = datetime.today()
     sdate = (today - timedelta(days=30)).strftime("%Y-%m-%d")
@@ -215,24 +213,21 @@ def main():
             link = order["link"]
             name = order["name"]
 
-            # 🔥 가장 최신 송장 저장
             if not newest_invoice:
                 newest_invoice = invoice
 
-            # 🔥 기준 도달하면 중단
             if last_invoice and int(invoice) <= int(last_invoice):
                 print("🛑 기준 도달 -> 중단")
-                stop = True
                 break
 
             print("➕ 저장:", invoice, name)
-
             add_to_notion(link, name)
 
-        if stop:
-            break
+        else:
+            offset += limit
+            continue
 
-        offset += limit
+        break
 
     if newest_invoice:
         save_last_invoice(newest_invoice)
