@@ -1,7 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
 import os
-import json
 from datetime import datetime, timedelta
 
 ASAP_LOGIN_URL = "https://asap-china.com/elpisbbs/login.php"
@@ -21,10 +20,10 @@ NOTION_HEADERS = {
 
 
 # ==================================================
-# 🔥 노션에서 마지막 기준 가져오기
+# 🔥 노션에서 마지막 기준 링크 가져오기
 # ==================================================
 
-def get_last_invoice_from_notion():
+def get_last_link_from_notion():
 
     if not NOTION_DATABASE_ID:
         print("❌ 노션 DB ID 없음")
@@ -57,7 +56,6 @@ def get_last_invoice_from_notion():
     page = results[0]
     props = page["properties"]
 
-    # 🔥 조회링크 값 가져오기
     try:
         url_property = props["조회링크"]["url"]
     except:
@@ -66,13 +64,7 @@ def get_last_invoice_from_notion():
     if not url_property:
         return None
 
-    # 🔥 url에서 invoice 번호 추출
-    invoice = url_property.split("invoice=")[-1]
-
-    if invoice.isdigit():
-        return invoice
-
-    return None
+    return url_property.strip()
 
 
 # ==================================================
@@ -104,7 +96,7 @@ def login():
 
 
 # ==================================================
-# 🔥 파싱
+# 🔥 HTML 파싱
 # ==================================================
 
 def parse_orders(html):
@@ -138,7 +130,6 @@ def parse_orders(html):
 
                 if len(p_tags) >= 2:
                     name = p_tags[1].get_text(strip=True)
-
                 elif len(p_tags) == 1:
                     name = p_tags[0].get_text(strip=True)
 
@@ -187,10 +178,9 @@ def add_to_notion(link, receiver):
 
 def main():
 
-    # ✅ 기준을 이제 노션에서 가져옴
-    last_invoice = get_last_invoice_from_notion()
-
-    print("📌 노션 기준:", last_invoice)
+    # ✅ 노션에서 기준 링크 가져오기
+    last_link = get_last_link_from_notion()
+    print("📌 노션 기준 링크:", last_link)
 
     session = login()
     if not session:
@@ -200,7 +190,7 @@ def main():
 
     offset = 0
     limit = 20
-    newest_invoice = None
+    newest_link = None
 
     today = datetime.today()
     sdate = (today - timedelta(days=30)).strftime("%Y-%m-%d")
@@ -241,28 +231,30 @@ def main():
         if not orders:
             break
 
+        stop = False
+
         for order in orders:
 
             invoice = order["invoice"]
             link = order["link"]
             name = order["name"]
 
-            if not newest_invoice:
-                newest_invoice = invoice
+            if not newest_link:
+                newest_link = link
 
-            if last_invoice and int(invoice) <= int(last_invoice):
-                print("🛑 기준 도달 -> 중단")
+            # ✅ 기준 링크 발견하면 중단
+            if last_link and link == last_link:
+                print("🛑 기준 링크 발견 -> 중단")
+                stop = True
                 break
 
             print("➕ 저장:", invoice, name)
             add_to_notion(link, name)
 
-        else:
-            offset += limit
-            continue
+        if stop:
+            break
 
-        break
-
+        offset += limit
 
     print("✅ 실행 완료")
 
