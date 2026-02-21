@@ -238,6 +238,8 @@ def main():
         if not orders:
             break
 
+        valid_orders = []
+
         stop = False
 
         for order in orders:
@@ -250,13 +252,17 @@ def main():
                 newest_link = link
 
             # ✅ 기준 링크 발견하면 중단
-            if last_link and link == last_link:
-                print("🛑 기준 링크 발견 -> 중단")
-                stop = True
-                break
+           if last_link and order["link"] == last_link:
+               print("🛑 기준 링크 발견 -> 중단")
+               break
+               
+            valid_orders.append(order)
+        # 🔥 저장 전에 뒤집어서 등록
+        valid_orders.reverse()
 
-            print("➕ 저장:", invoice, name)
-            add_to_notion(link, name)
+        for order in valid_orders:
+            print("➕ 저장:", order["invoice"], order["name"])
+            add_to_notion(order["link"], order["name"])
 
         if stop:
             break
