@@ -23,7 +23,7 @@ LAST_FILE = "last_invoice.json"
 
 
 # =============================
-# 🔹 기준 저장 / 불러오기
+# 🔹 기준 관리
 # =============================
 
 def load_last_invoice():
@@ -57,6 +57,7 @@ def login():
     }
 
     res = session.post(ASAP_LOGIN_URL, data=payload, headers=headers)
+
     print("🔐 로그인 응답코드:", res.status_code)
     print("🍪 로그인 쿠키:", session.cookies.get_dict())
 
@@ -64,34 +65,50 @@ def login():
 
 
 # =============================
-# 🔹 HTML에서 송장 / 링크 / 이름 파싱
+# 🔥 핵심 파싱 로직 (수정 완료)
 # =============================
 
 def parse_orders(html):
     soup = BeautifulSoup(html, "html.parser")
     orders = []
 
-    # 🔥 송장번호 a 태그 찾기
+    # 🔥 송장 a 태그만 정확히 찾기
     for a in soup.find_all("a", href=True):
+
         invoice = a.get_text(strip=True)
 
+        # 송장번호가 숫자일 때만 처리
         if not invoice.isdigit():
             continue
 
         link = a["href"]
 
-        # ✅ 송장 기준으로 부모 테이블 탐색
-        parent = a.find_parent("tr")
+        # ✅ 링크 중복 방지
+        if link.startswith("http"):
+            full_link = link
+        else:
+            full_link = "https://www.asap-china.com" + link
+
+        # 🔥 같은 주문 블록에서 이름 찾기
         name = ""
 
-        if parent:
-            name_tag = parent.find("p")
-            if name_tag:
-                name = name_tag.get_text(strip=True)
+        block_td = a.find_parent("td")
+        if block_td:
+            # 주문 전체 블록 탐색
+            parent_tr = block_td.find_parent("tr")
+            if parent_tr:
+                # 그 tr 안에서 p 태그 찾기
+                p_tag = parent_tr.find("p")
+                if p_tag:
+                    name = p_tag.get_text(strip=True)
+
+        # 🔥 배송대행이면 이름 제거
+        if "배송" in name:
+            name = ""
 
         orders.append({
             "invoice": invoice,
-            "link": link,
+            "link": full_link,
             "name": name
         })
 
@@ -123,10 +140,11 @@ def add_to_notion(link, receiver):
 
 
 # =============================
-# 🔥 메인
+# 🔥 메인 실행
 # =============================
 
 def main():
+
     last_invoice = load_last_invoice()
     print("📌 현재 기준:", last_invoice)
 
@@ -182,13 +200,14 @@ def main():
         for order in orders:
 
             invoice = order["invoice"]
-            link = "https://www.asap-china.com" + order["link"]
+            link = order["link"]
             name = order["name"]
 
+            # 🔥 가장 최신 송장 저장
             if not newest_invoice:
                 newest_invoice = invoice
 
-            # ✅ 기준 도달하면 중단
+            # 🔥 기준 도달하면 중단
             if last_invoice and int(invoice) <= int(last_invoice):
                 print("🛑 기준 도달 -> 중단")
                 stop = True
