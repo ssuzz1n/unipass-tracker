@@ -32,7 +32,13 @@ def get_last_link_from_notion():
     url = f"https://api.notion.com/v1/databases/{NOTION_DATABASE_ID}/query"
 
     payload = {
-        "page_size": 100
+        "page_size": 100,
+        "sorts": [
+            {
+                "property": "조회링크",
+                "direction": "descending"
+            }
+        ]
     }
 
     res = requests.post(url, headers=NOTION_HEADERS, json=payload)
@@ -40,7 +46,7 @@ def get_last_link_from_notion():
     print("🔎 노션 API 응답코드:", res.status_code)
 
     if res.status_code != 200:
-        print(res.text)
+        print("🔎 노션 API 응답:", res.text)
         return None
 
     data = res.json()
@@ -49,14 +55,9 @@ def get_last_link_from_notion():
     if not results:
         return None
 
-    # 🔥 최신 순 정렬
-    results_sorted = sorted(
-        results,
-        key=lambda x: x["created_time"],
-        reverse=True
-    )
+    # 🔥 정렬된 상태에서 아래부터 탐색
+    for page in results:
 
-    for page in results_sorted:
         props = page.get("properties", {})
 
         try:
@@ -64,11 +65,12 @@ def get_last_link_from_notion():
         except:
             continue
 
-        if url_property:
+        if url_property and url_property.strip() != "":
+            print("✅ 기준 링크 발견:", url_property.strip())
             return url_property.strip()
 
+    print("⚠ 기준이 될 조회링크 없음")
     return None
-
 
 # ==================================================
 # 🔥 로그인
