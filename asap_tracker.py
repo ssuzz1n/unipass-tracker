@@ -22,6 +22,10 @@ NOTION_HEADERS = {
 LAST_FILE = "last_invoice.json"
 
 
+# =============================
+# 🔹 기준 저장 / 불러오기
+# =============================
+
 def load_last_invoice():
     if not os.path.exists(LAST_FILE):
         return None
@@ -34,6 +38,10 @@ def save_last_invoice(invoice):
     with open(LAST_FILE, "w") as f:
         json.dump({"last_invoice": invoice}, f, indent=2)
 
+
+# =============================
+# 🔹 로그인
+# =============================
 
 def login():
     session = requests.Session()
@@ -55,30 +63,54 @@ def login():
     return session
 
 
+# =============================
+# 🔹 HTML에서 송장 / 링크 / 이름 파싱
+# =============================
+
 def parse_orders(html):
     soup = BeautifulSoup(html, "html.parser")
-    results = []
+    orders = []
 
-    for link in soup.find_all("a"):
-        href = link.get("href")
-        text = link.get_text(strip=True)
+    # 🔥 송장번호 a 태그 찾기
+    for a in soup.find_all("a", href=True):
+        invoice = a.get_text(strip=True)
 
-        if href and text.isdigit():
-            full_link = "https://asap-china.com" + href
-            results.append({
-                "invoice": text,
-                "link": full_link
-            })
+        if not invoice.isdigit():
+            continue
 
-    return results
+        link = a["href"]
+
+        # ✅ 송장 기준으로 부모 테이블 탐색
+        parent = a.find_parent("tr")
+        name = ""
+
+        if parent:
+            name_tag = parent.find("p")
+            if name_tag:
+                name = name_tag.get_text(strip=True)
+
+        orders.append({
+            "invoice": invoice,
+            "link": link,
+            "name": name
+        })
+
+    return orders
 
 
-def add_to_notion(link, receiver=""):
+# =============================
+# 🔹 노션 저장
+# =============================
+
+def add_to_notion(link, receiver):
     url = "https://api.notion.com/v1/pages"
+
     payload = {
         "parent": {"database_id": NOTION_DATABASE_ID},
         "properties": {
-            "조회링크": {"url": link},
+            "조회링크": {
+                "url": link
+            },
             "성함": {
                 "rich_text": [
                     {"text": {"content": receiver}}
@@ -86,15 +118,19 @@ def add_to_notion(link, receiver=""):
             }
         }
     }
+
     requests.post(url, headers=NOTION_HEADERS, json=payload)
 
+
+# =============================
+# 🔥 메인
+# =============================
 
 def main():
     last_invoice = load_last_invoice()
     print("📌 현재 기준:", last_invoice)
 
     session = login()
-    # 🟢 서비스 페이지 먼저 방문 (세션 완성용)
     session.get("https://asap-china.com/mypage/service_list.php")
 
     offset = 0
@@ -107,37 +143,21 @@ def main():
     edate = today.strftime("%Y-%m-%d")
 
     while True:
-        # 🟢 AJAX 요청 파라미터 (Query String)
+
         params = {
             "last": offset,
             "limit": limit,
-            "find": "",
-            "value": "",
-            "or_de_no": "",
-            "state": "",
             "sdate": sdate,
             "edate": edate,
             "mb_id": ASAP_ID,
-            "type": "",
-            "last_code": "",
-            "it_code": "",
-            "dtype": "",
-            "gr_output_stay_type": "",
-            "gr_var5": "",
-            "gr_unipass_result": "",
-            "gr_fltno": "",
-            "gr_fltno2": "",
         }
 
         headers = {
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
+            "User-Agent": "Mozilla/5.0",
             "Referer": "https://asap-china.com/mypage/service_list.php",
-            "Origin": "https://asap-china.com",
             "X-Requested-With": "XMLHttpRequest",
-            "Accept": "text/html, */*; q=0.01",
         }
 
-        # 🟢 POST body 없이 params로 전달
         res = session.post(
             ASAP_AJAX_URL,
             headers=headers,
@@ -147,32 +167,36 @@ def main():
         print("📡 응답코드:", res.status_code)
 
         if res.status_code != 200:
-            print("❌ 요청 실패")
             break
 
         html = res.text
 
         if not html.strip():
-            print("📭 응답이 비어있음. 종료.")
             break
 
         orders = parse_orders(html)
 
         if not orders:
-            print("📭 더 이상 주문 없음.")
             break
 
-        for idx, order in enumerate(orders):
-            if offset == 0 and idx == 0:
-                newest_invoice = order["invoice"]
+        for order in orders:
 
-            if last_invoice and order["invoice"] == last_invoice:
-                print("🛑 기준 도달. 중단.")
+            invoice = order["invoice"]
+            link = "https://www.asap-china.com" + order["link"]
+            name = order["name"]
+
+            if not newest_invoice:
+                newest_invoice = invoice
+
+            # ✅ 기준 도달하면 중단
+            if last_invoice and int(invoice) <= int(last_invoice):
+                print("🛑 기준 도달 -> 중단")
                 stop = True
                 break
 
-            print("➕ 추가:", order["invoice"])
-            add_to_notion(order["link"])
+            print("➕ 저장:", invoice, name)
+
+            add_to_notion(link, name)
 
         if stop:
             break
