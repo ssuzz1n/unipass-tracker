@@ -247,7 +247,7 @@ def main():
             valid_orders.append(order)
 
         # 🔥 저장 전에 뒤집기 (아래부터 쌓이게)
-        #valid_orders.reverse()
+        valid_orders.reverse()
 
         for order in valid_orders:
             print("➕ 저장:", order["invoice"], order["name"])
