@@ -64,7 +64,7 @@ def login():
  #   print("📄 받아온 HTML 일부:", html[:1000]) 
 #    if not html.strip():
    #     print("📭 응답이 비어있음. 종료.")
-        break
+   #     break
 
     return session
 
