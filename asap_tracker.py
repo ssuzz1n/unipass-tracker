@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import os
+import time
 from datetime import datetime, timedelta
 
 ASAP_LOGIN_URL = "https://asap-china.com/elpisbbs/login.php"
@@ -20,7 +21,7 @@ NOTION_HEADERS = {
 
 
 # ==================================================
-# 🔥 노션에서 마지막 기준 링크 가져오기
+# 🔥 노션에서 마지막 기준 링크 가져오기 (SortKey 기준)
 # ==================================================
 
 def get_last_link_from_notion():
@@ -32,7 +33,13 @@ def get_last_link_from_notion():
     url = f"https://api.notion.com/v1/databases/{NOTION_DATABASE_ID}/query"
 
     payload = {
-        "page_size": 100
+        "page_size": 100,
+        "sorts": [
+            {
+                "property": "SortKey",
+                "direction": "descending"
+            }
+        ]
     }
 
     res = requests.post(url, headers=NOTION_HEADERS, json=payload)
@@ -48,14 +55,8 @@ def get_last_link_from_notion():
     if not results:
         return None
 
-    # 최신순 정렬
-    results_sorted = sorted(
-        results,
-        key=lambda x: x["created_time"],
-        reverse=True
-    )
+    for page in results:
 
-    for page in results_sorted:
         props = page.get("properties", {})
 
         try:
@@ -72,7 +73,7 @@ def get_last_link_from_notion():
 
 
 # ==================================================
-# 🔥 로그인
+# 🔐 로그인
 # ==================================================
 
 def login():
@@ -150,7 +151,7 @@ def parse_orders(html):
 
 
 # ==================================================
-# 🔥 노션 저장
+# 🔥 노션 저장 (SortKey 추가!!)
 # ==================================================
 
 def add_to_notion(link, receiver):
@@ -161,19 +162,29 @@ def add_to_notion(link, receiver):
 
     url = "https://api.notion.com/v1/pages"
 
+    sort_key = time.time()  # ✅ 자동 증가 키
+
     payload = {
         "parent": {"database_id": NOTION_DATABASE_ID},
         "properties": {
-            "조회링크": {"url": link},
+            "조회링크": {
+                "url": link
+            },
             "성함": {
                 "rich_text": [
                     {"text": {"content": receiver}}
                 ]
+            },
+            "SortKey": {   # ✅ 새로 추가된 필드
+                "number": sort_key
             }
         }
     }
 
-    requests.post(url, headers=NOTION_HEADERS, json=payload)
+    res = requests.post(url, headers=NOTION_HEADERS, json=payload)
+
+    if res.status_code != 200:
+        print("❌ 노션 저장 실패:", res.text)
 
 
 # ==================================================
@@ -234,27 +245,22 @@ def main():
 
         valid_orders = []
 
-        # 🔥 기준 체크
         for order in orders:
 
-            invoice = order["invoice"]
             link = order["link"]
 
-            # 기준 만나면 중단
             if last_link and link == last_link:
                 print("🛑 기준 링크 발견 -> 중단")
                 break
 
             valid_orders.append(order)
 
-        # 🔥 저장 전에 뒤집기 (아래부터 쌓이게)
         valid_orders.reverse()
 
         for order in valid_orders:
             print("➕ 저장:", order["invoice"], order["name"])
             add_to_notion(order["link"], order["name"])
 
-        # 기준 만나서 break 된 경우
         if last_link and any(o["link"] == last_link for o in orders):
             break
 
