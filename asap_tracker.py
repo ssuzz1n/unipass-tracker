@@ -57,9 +57,14 @@ def login():
     }
 
     res = session.post(ASAP_LOGIN_URL, data=payload, headers=headers)
-
+    
     print("🔐 로그인 응답코드:", res.status_code)
     print("🍪 로그인 쿠키:", session.cookies.get_dict())
+    html = res.text
+    print("📄 받아온 HTML 일부:", html[:1000])  # 👈 여기 추가
+    if not html.strip():
+        print("📭 응답이 비어있음. 종료.")
+    break
 
     return session
 
