@@ -32,7 +32,7 @@ def get_last_link_from_notion():
     url = f"https://api.notion.com/v1/databases/{NOTION_DATABASE_ID}/query"
 
     payload = {
-        "page_size": 100  # 최대한 많이 가져오기
+        "page_size": 100
     }
 
     res = requests.post(url, headers=NOTION_HEADERS, json=payload)
@@ -43,22 +43,19 @@ def get_last_link_from_notion():
         print("🔎 노션 API 응답:", res.text)
         return None
 
-    data = res.json()
-    results = data.get("results", [])
+    results = res.json().get("results", [])
 
     if not results:
         return None
 
-    # 🔥 최신순 정렬 (created_time 기준)
+    # 최신순 정렬
     results_sorted = sorted(
         results,
         key=lambda x: x["created_time"],
         reverse=True
     )
 
-    # 🔥 아래에서 위로 탐색하면서 링크 있는 첫 데이터 찾기
     for page in results_sorted:
-
         props = page.get("properties", {})
 
         try:
@@ -66,13 +63,13 @@ def get_last_link_from_notion():
         except:
             continue
 
-        if url_property and url_property.strip() != "":
+        if url_property and url_property.strip():
             print("✅ 기준 링크 발견:", url_property)
             return url_property.strip()
 
-    # 🔥 끝까지 못 찾으면
-    print("⚠ 기준이 될 조회링크 없음")
+    print("⚠ 기준 링크 없음")
     return None
+
 
 # ==================================================
 # 🔥 로그인
@@ -185,7 +182,6 @@ def add_to_notion(link, receiver):
 
 def main():
 
-    # ✅ 노션에서 기준 링크 가져오기
     last_link = get_last_link_from_notion()
     print("📌 노션 기준 링크:", last_link)
 
@@ -197,10 +193,8 @@ def main():
 
     offset = 0
     limit = 20
-    newest_link = None
 
     today = datetime.today()
-    sdate = (today - timedelta(days=30)).strftime("%Y-%m-%d")
     edate = today.strftime("%Y-%m-%d")
 
     while True:
@@ -209,7 +203,6 @@ def main():
             "last": offset,
             "limit": limit,
             "sdate": "2026-02-20",
-            #"sdate": sdate,
             "edate": edate,
             "mb_id": ASAP_ID,
         }
@@ -240,31 +233,28 @@ def main():
 
         valid_orders = []
 
-        stop = False
-
+        # 🔥 기준 체크
         for order in orders:
 
             invoice = order["invoice"]
             link = order["link"]
-            name = order["name"]
 
-            if not newest_link:
-                newest_link = link
+            # 기준 만나면 중단
+            if last_link and link == last_link:
+                print("🛑 기준 링크 발견 -> 중단")
+                break
 
-            # ✅ 기준 링크 발견하면 중단
-           if last_link and order["link"] == last_link:
-               print("🛑 기준 링크 발견 -> 중단")
-               break
-               
             valid_orders.append(order)
-        # 🔥 저장 전에 뒤집어서 등록
+
+        # 🔥 저장 전에 뒤집기 (아래부터 쌓이게)
         valid_orders.reverse()
 
         for order in valid_orders:
             print("➕ 저장:", order["invoice"], order["name"])
             add_to_notion(order["link"], order["name"])
 
-        if stop:
+        # 기준 만나서 break 된 경우
+        if last_link and any(o["link"] == last_link for o in orders):
             break
 
         offset += limit
