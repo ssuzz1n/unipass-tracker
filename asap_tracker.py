@@ -195,6 +195,7 @@ def main():
     limit = 20
 
     today = datetime.today()
+    sdate = (today - timedelta(days=10)).strftime("%Y-%m-%d")
     edate = today.strftime("%Y-%m-%d")
 
     while True:
@@ -202,7 +203,7 @@ def main():
         params = {
             "last": offset,
             "limit": limit,
-            "sdate": "2026-02-20",
+            "sdate": sdate,
             "edate": edate,
             "mb_id": ASAP_ID,
         }
