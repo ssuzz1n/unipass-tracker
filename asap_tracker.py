@@ -207,7 +207,8 @@ def main():
 
     today = datetime.today()
     sdate = (today - timedelta(days=10)).strftime("%Y-%m-%d")
-    edate = today.strftime("%Y-%m-%d")
+    #edate = today.strftime("%Y-%m-%d")
+    edate = "2026-02-23"
 
     while True:
 
