@@ -214,9 +214,22 @@ def main():
         params = {
             "last": offset,
             "limit": limit,
+            "find": "",
+            "value": "",
+            "or_de_no": "",
+            "state": "",
             "sdate": sdate,
             "edate": edate,
             "mb_id": ASAP_ID,
+            "type": "",
+            "last_code": "",
+            "it_code": "",
+            "dtype": "",
+            "gr_output_stay_type": "",
+            "gr_var5": "",
+            "gr_unipass_result": "",
+            "gr_fltno": "",
+            "gr_fltno2": "",
         }
 
         headers = {
@@ -228,7 +241,7 @@ def main():
         res = session.post(
             ASAP_AJAX_URL,
             headers=headers,
-            params=params
+            data=params
         )
 
         if res.status_code != 200:
