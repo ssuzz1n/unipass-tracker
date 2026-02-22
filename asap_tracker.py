@@ -201,6 +201,7 @@ def main():
         return
 
     session.get("https://asap-china.com/mypage/service_list.php")
+    time.sleep(1)
 
     offset = 0
     limit = 20
@@ -245,6 +246,9 @@ def main():
             headers=headers,
             data=params
         )
+
+        print("AJAX 응답 상태코드:", res.status_code)
+        print("AJAX 응답 길이:", len(res.text))
 
         #디버깅
         html = res.text
