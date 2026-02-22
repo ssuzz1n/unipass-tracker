@@ -235,16 +235,17 @@ def main():
             "gr_fltno2": "",
         }
 
-        headers = {
-            "User-Agent": "Mozilla/5.0",
-            "Referer": "https://asap-china.com/mypage/service_list.php",
+       headers = {
+           "User-Agent": "Mozilla/5.0",
             "X-Requested-With": "XMLHttpRequest",
-        }
+            "Referer": "https://asap-china.com/mypage/service_list.php",
+            "Origin": "https://asap-china.com"
+       }
 
         res = session.post(
             ASAP_AJAX_URL,
             headers=headers,
-            data=params
+            params=params
         )
 
         print("AJAX 응답 상태코드:", res.status_code)
