@@ -207,10 +207,10 @@ def main():
     limit = 20
 
     today = datetime.today()
-    sdate = (today - timedelta(days=10)).strftime("%Y-%m-%d")
-    edate = today.strftime("%Y-%m-%d")
-    #sdate = "2000-01-01"
-    #edate = "2099-12-31"
+    #sdate = (today - timedelta(days=10)).strftime("%Y-%m-%d")
+    #edate = today.strftime("%Y-%m-%d")
+    sdate = "2000-01-01"
+    edate = "2099-12-31"
 
     while True:
 
