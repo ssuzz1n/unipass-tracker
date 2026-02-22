@@ -206,9 +206,10 @@ def main():
     limit = 20
 
     today = datetime.today()
-    sdate = (today - timedelta(days=10)).strftime("%Y-%m-%d")
+    #sdate = (today - timedelta(days=10)).strftime("%Y-%m-%d")
     #edate = today.strftime("%Y-%m-%d")
-    edate = "2026-02-23"
+    sdate = "2000-01-01"
+    edate = "2099-12-31"
 
     while True:
 
@@ -244,6 +245,39 @@ def main():
             headers=headers,
             data=params
         )
+
+        #디버깅
+        html = res.text
+
+        print("\n============================")
+        print("🔍 HTML 일부 출력 (앞 2000자)")
+        print("============================\n")
+        print(html[:2000])
+
+        orders = parse_orders(html)
+
+        print("\n============================")
+        print("📦 첫 페이지 주문 링크 목록")
+        print("============================\n")
+
+        for i, o in enumerate(orders):
+            print(f"{i+1}. {o['link']}")
+
+        print("\n============================")
+        print("🎯 기준 링크 위치 확인")
+        print("============================\n")
+    
+        if last_link:
+            for i, o in enumerate(orders):
+                if o["link"] == last_link:
+                    print(f"⚠ 기준 링크가 {i+1}번째에 있음")
+                    break
+            else:
+                print("❌ 기준 링크가 이 페이지에 없음")
+    
+        print("\n✅ 디버깅 완료")
+
+        #끝
 
         if res.status_code != 200:
             break
