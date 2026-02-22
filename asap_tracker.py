@@ -207,10 +207,10 @@ def main():
     limit = 20
 
     today = datetime.today()
-    #sdate = (today - timedelta(days=10)).strftime("%Y-%m-%d")
-    #edate = today.strftime("%Y-%m-%d")
-    sdate = "2000-01-01"
-    edate = "2099-12-31"
+    sdate = (today - timedelta(days=10)).strftime("%Y-%m-%d")
+    edate = today.strftime("%Y-%m-%d")
+    #sdate = "2000-01-01"
+    #edate = "2099-12-31"
 
     while True:
 
@@ -251,7 +251,7 @@ def main():
         print("AJAX 응답 상태코드:", res.status_code)
         print("AJAX 응답 길이:", len(res.text))
 
-        #디버깅
+        '''#디버깅
         html = res.text
 
         print("\n============================")
@@ -282,7 +282,7 @@ def main():
     
         print("\n✅ 디버깅 완료")
 
-        #끝
+        #끝'''
 
         if res.status_code != 200:
             break
