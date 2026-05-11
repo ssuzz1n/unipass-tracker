@@ -1,0 +1,26 @@
+name: Unipass Checker2
+on:
+  schedule:
+    - cron: "0 1 * * *"    # KST 10:00
+    - cron: "0 13 * * *"   # KST 22:00
+  workflow_dispatch:
+  
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4        # v3 → v4
+      
+      - name: Install Python
+        uses: actions/setup-python@v5   # v4 → v5
+        with:
+          python-version: '3.10'
+      
+      - name: Install Requirements
+        run: pip install -r requirements.txt
+      
+      - name: Run Unipass Checker
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+        run: python unipass_check_ledger.py
