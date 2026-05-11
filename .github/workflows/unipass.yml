@@ -9,18 +9,24 @@ jobs:
   run-script:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4        # v3 → v4
+      - uses: actions/checkout@v4
       
       - name: Install Python
-        uses: actions/setup-python@v5   # v4 → v5
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
       
       - name: Install Requirements
         run: pip install -r requirements.txt
       
-      - name: Run Unipass Checker
+      - name: Run Unipass Checker (송장 DB - 기존)
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
         run: python unipass_check.py
+
+      - name: Run Unipass Checker (장부 DB - 신규)
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          LEDGER_DB_ID: ${{ secrets.LEDGER_DB_ID }}
+        run: python unipass_check_ledger.py
