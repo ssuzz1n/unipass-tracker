@@ -19,11 +19,11 @@ jobs:
       - name: Install Requirements
         run: pip install -r requirements.txt
       
-#      - name: Run Unipass Checker (송장 DB - 기존)
-#        env:
- #         NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
- #         NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
-   #     run: python unipass_check.py
+      - name: Run Unipass Checker (송장 DB - 기존)
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+        run: python unipass_check.py
 
       - name: Run Unipass Checker (장부 DB - 신규)
         env:
