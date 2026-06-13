@@ -48,6 +48,12 @@ def get_tracking_items():
     for result in data["results"]:
         props = result["properties"]
 
+        # ✅ 이미 통관 완료인 항목 건너뜀
+        status = props.get("Status", {}).get("status") or {}
+        if status.get("name") == "통관 완료":
+            print(f"[⏭️ 스킵] 이미 통관 완료 상태")
+            continue
+
         full_url = props.get("조회링크", {}).get("url", "") or ""
         name = props.get("성함", {}).get("rich_text", [])
         name_text = name[0]["plain_text"] if name else ""
