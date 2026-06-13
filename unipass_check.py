@@ -16,7 +16,7 @@ NOTION_HEADERS = {
     "Content-Type": "application/json",
 }
 
-# 📌 공통 User-Agent (가끔 사이트에서 UA 없으면 막는 경우 있음)
+# 📌 공통 User-Agent
 UA_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123 Safari/537.36"
 }
@@ -29,11 +29,6 @@ def is_probably_number(s: str) -> bool:
 
 
 def get_tracking_items():
-    """
-    Notion DB에서 조회링크, 성함, page_id 가져오기
-    - 조회링크가 URL이면: asap 링크로 판단
-    - 조회링크가 숫자면: House B/L(송장번호)로 판단 (Tradlinx 조회)
-    """
     url = f"https://api.notion.com/v1/databases/{NOTION_DATABASE_ID}/query"
     response = requests.post(url, headers=NOTION_HEADERS, json={})
 
@@ -60,7 +55,6 @@ def get_tracking_items():
 
         raw = (full_url or "").strip()
 
-        # 1) ASAP 링크(기존 방식)
         if raw.startswith("http"):
             parsed_url = urlparse(raw)
             query_params = parse_qs(parsed_url.query)
@@ -84,7 +78,6 @@ def get_tracking_items():
                     "raw": raw,
                 })
 
-        # 2) 숫자만 있으면 -> Tradlinx (하이원 House B/L)
         elif is_probably_number(raw):
             items.append({
                 "type": "tradlinx",
@@ -106,7 +99,6 @@ def get_tracking_items():
 
 
 def check_unipass_status_asap(code, invoice):
-    """(기존) ASAP 유니패스 처리단계 + 처리일시 가져오기"""
     url = f"https://asap-china.com/guide/unipass_delivery.php?code={code}&invoice={invoice}"
     response = requests.get(url, headers=UA_HEADERS, timeout=20)
     soup = BeautifulSoup(response.text, "html.parser")
@@ -116,7 +108,7 @@ def check_unipass_status_asap(code, invoice):
         return []
 
     table = tables[1]
-    rows = table.find_all("tr")[1:]  # 헤더 제외
+    rows = table.find_all("tr")[1:]
 
     steps = []
     for row in rows:
@@ -130,12 +122,6 @@ def check_unipass_status_asap(code, invoice):
 
 
 def fetch_tradlinx_steps(bl_no: str, year: int):
-    """
-    Tradlinx 페이지에서 처리단계(step) / 처리일시(time) 파싱
-    - 네가 올린 HTML 기준: cargo-process 안에 process-detail 반복
-      li.tp-cd = 단계명
-      li.rl-br-dttm = 일시
-    """
     url = f"https://www.tradlinx.com/ko/unipass?type=2&blNo={bl_no}&blYr={year}"
     r = requests.get(url, headers=UA_HEADERS, timeout=25)
     html = r.text
@@ -143,7 +129,6 @@ def fetch_tradlinx_steps(bl_no: str, year: int):
     soup = BeautifulSoup(html, "html.parser")
     cargo = soup.find("div", class_="cargo-process")
     if not cargo:
-        # (확실하지 않음) 만약 JS 렌더링이라면 여기서 빈 페이지가 나올 수 있음
         return []
 
     steps = []
@@ -159,11 +144,6 @@ def fetch_tradlinx_steps(bl_no: str, year: int):
 
 
 def check_unipass_status_tradlinx(bl_no: str):
-    """
-    Tradlinx는 blYr(년도)가 필요해서:
-    - 올해 먼저 시도
-    - 안 나오면 작년 시도 (연말/연초 걸쳐있을 수 있어서)
-    """
     this_year = datetime.now().year
     for y in [this_year, this_year - 1]:
         steps = fetch_tradlinx_steps(bl_no, y)
@@ -173,24 +153,18 @@ def check_unipass_status_tradlinx(bl_no: str):
 
 
 def update_notion_status(page_id, processed_at):
-    """
-    노션 페이지의 '반입상태'를
-    '심사완료 [처리일시]' 형태로 업데이트
-    """
-    status_text = f"심사완료 [{processed_at}]"
-
     url = f"https://api.notion.com/v1/pages/{page_id}"
     payload = {
         "properties": {
-            "반입상태": {
-                "rich_text": [{"text": {"content": status_text}}]
+            "Status": {
+                "status": {"name": "통관 완료"}
             }
         }
     }
 
     resp = requests.patch(url, headers=NOTION_HEADERS, json=payload)
     if resp.status_code == 200:
-        print(f"[🟢 반입상태 업데이트 완료] {page_id} → {status_text}")
+        print(f"[🟢 Status 업데이트 완료] {page_id} → 통관 완료")
     else:
         print(f"[⚠️ 업데이트 실패] {resp.status_code} / {resp.text}")
 
