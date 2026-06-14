@@ -48,10 +48,10 @@ def get_tracking_items():
     for result in data["results"]:
         props = result["properties"]
 
-        # ✅ 이미 통관 완료인 항목 건너뜀
+        # ✅ 'Not started' 상태인 항목만 검사
         status = props.get("Status", {}).get("status") or {}
-        if status.get("name") == "통관 완료":
-            print(f"[⏭️ 스킵] 이미 통관 완료 상태")
+        if status.get("name") != "Not started":
+            print(f"[⏭️ 스킵] Status: {status.get('name', '없음')}")
             continue
 
         full_url = props.get("조회링크", {}).get("url", "") or ""
